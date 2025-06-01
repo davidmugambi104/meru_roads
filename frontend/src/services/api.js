@@ -1,7 +1,7 @@
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://meru-roads.onrender.com/api';
 
 // Helper function for API calls
-const fetchData = async (endpoint, options = {}) => {
+export const fetchData = async (endpoint, options = {}) => {
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       headers: {

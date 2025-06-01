@@ -9,7 +9,7 @@ app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'meru_roads.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-yyyyyy
+
 db.init_app(app)
 migrate = Migrate(app, db)
 
