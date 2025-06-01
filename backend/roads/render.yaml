@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: meru-roads
+    env: python
+    buildCommand: poetry install
+    startCommand: poetry run python main.py  # or your actual entry point
+    envVars:
+      - key: POETRY_VIRTUALENVS_CREATE
+        value: "false"
