@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from sqlalchemy import func
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -154,4 +155,20 @@ class RoadStats(db.Model):
             'budget_allocated': self.budget_allocated,
             'budget_spent': self.budget_spent,
             'last_updated': self.last_updated.isoformat()
+        }
+class AccessibilitySetting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    high_contrast = db.Column(db.Boolean, default=False)
+    text_size = db.Column(db.String(10), default='medium')  # 'small', 'medium', 'large'
+    voice_navigation = db.Column(db.Boolean, default=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('accessibility_settings', lazy=True, uselist=False))
+
+    def to_dict(self):
+        return {
+            'highContrast': self.high_contrast,
+            'textSize': self.text_size,
+            'voiceNavigation': self.voice_navigation
         }

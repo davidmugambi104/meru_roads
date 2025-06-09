@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_migrate import Migrate
-from models import db, Road, Contractor, Milestone, Photo, User, Notification, RoadStats
+from models import db, Road, Contractor, Milestone, Photo, User, Notification, RoadStats,AccessibilitySetting
 from utils import sort_and_search_roads, calculate_road_stats, format_currency, format_date
 from datetime import datetime
 import os
@@ -326,10 +326,44 @@ def init_db():
         Notification(user=admin_user, message="Monthly progress report ready for review")
     ]
     
-    # ... rest of init code ...
+
 # ========================
 # HELPER FUNCTIONS
 # ========================
+
+@app.route('/api/contractors/<int:contractor_id>', methods=['GET'])
+def get_contractor(contractor_id):
+    contractor = Contractor.query.get_or_404(contractor_id)
+    return jsonify(contractor.serialize())
+
+@app.route('/api/contractors', methods=['POST'])
+def create_contractor():
+    data = request.get_json()
+    name = data.get('name')
+    contact_email = data.get('contact_email')
+    contact_phone = data.get('contact_phone')
+
+    if not name or not contact_email:
+        return jsonify({'error': 'Name and contact_email are required'}), 400
+
+    if Contractor.query.filter_by(name=name).first():
+        return jsonify({'error': 'Contractor with that name already exists'}), 409
+
+    contractor = Contractor(
+        name=name,
+        contact_email=contact_email,
+        contact_phone=contact_phone
+    )
+
+    db.session.add(contractor)
+    db.session.commit()
+
+    return jsonify(contractor.serialize()), 201
+
+
+
+
+
 def update_road_stats():
     roads = Road.query.all()
     stats_data = calculate_road_stats(roads)
@@ -345,6 +379,74 @@ def update_road_stats():
     
     db.session.add(new_stats)
     db.session.commit()
+
+from flask import Blueprint, request, jsonify
+from models import db, User
+
+user_bp = Blueprint('user_bp', __name__, url_prefix='/api/users')
+
+@user_bp.route('/', methods=['GET'])
+def get_users():
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users])
+
+@user_bp.route('/', methods=['POST'])
+def create_user():
+    data = request.get_json()
+    permissions = data.get('permissions', [])
+    if isinstance(permissions, str):
+        permissions = [p.strip() for p in permissions.split(',') if p.strip()]
+
+    user = User(name=data['name'], role=data['role'], permissions=permissions)
+    db.session.add(user)
+    db.session.commit()
+    return jsonify(user.to_dict()), 201
+
+@user_bp.route('/<int:user_id>', methods=['PATCH'])
+def update_user(user_id):
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+    user.name = data.get('name', user.name)
+    user.role = data.get('role', user.role)
+    permissions = data.get('permissions')
+    if permissions:
+        if isinstance(permissions, str):
+            permissions = [p.strip() for p in permissions.split(',') if p.strip()]
+        user.permissions = permissions
+    db.session.commit()
+    return jsonify(user.to_dict())
+
+@user_bp.route('/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'message': 'User deleted'})
+
+@app.route('/api/accessibility/<int:user_id>', methods=['GET'])
+def get_accessibility_settings(user_id):
+    settings = AccessibilitySetting.query.filter_by(user_id=user_id).first()
+    if not settings:
+        return jsonify({'error': 'Settings not found'}), 404
+    return jsonify(settings.serialize())
+
+@app.route('/api/accessibility/<int:user_id>', methods=['POST'])
+def update_accessibility_settings(user_id):
+    data = request.get_json()
+    settings = AccessibilitySetting.query.filter_by(user_id=user_id).first()
+
+    if not settings:
+        settings = AccessibilitySetting(user_id=user_id)
+
+    settings.high_contrast = data.get('high_contrast', settings.high_contrast)
+    settings.text_size = data.get('text_size', settings.text_size)
+    settings.voice_navigation = data.get('voice_navigation', settings.voice_navigation)
+
+    db.session.add(settings)
+    db.session.commit()
+    return jsonify(settings.serialize())
+
+
 
 # ========================
 # ERROR HANDLERS
