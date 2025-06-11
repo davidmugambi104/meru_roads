@@ -346,3 +346,67 @@
     flex-grow: 1;
   }
 }
+@media (max-width: 480px) {
+  .modal-content {
+    padding: 1rem;
+    border-radius: 8px;
+  }
+
+  .modal-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .form-group label {
+    font-size: 0.85rem;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 0.9rem;
+    padding: 0.65rem;
+  }
+
+  .btn {
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+  }
+
+  .add-road-btn {
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .header {
+    padding: 0.6rem 0.8rem;
+  }
+
+  .glitch {
+    font-size: 1.25rem;
+  }
+
+  .search-box {
+    min-width: unset;
+    font-size: 0.85rem;
+  }
+
+  .search-btn {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .notification-badge span {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+  }
+
+  .user-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.85rem;
+  }
+
+  .user-details {
+    font-size: 0.8rem;
+  }
+}
