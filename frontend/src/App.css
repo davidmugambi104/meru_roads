@@ -1,3 +1,25 @@
+:root {
+  /* Blue color variables */
+  --blue-primary: #1a73e8;
+  --blue-secondary: #4285f4;
+  --blue-accent: #185abc;
+  --blue-light: #e8f0fe;
+  --blue-border: rgba(66, 133, 244, 0.3);
+  
+  /* White shades */
+  --bg-main: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f3f4;
+  
+  /* Text colors */
+  --text-primary: #202124;
+  --text-secondary: #5f6368;
+  
+  /* Effects */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
 .form-modal {
   position: fixed;
@@ -17,168 +39,183 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(8, 22, 48, 0.85);
- backdrop-filter: blur(8px); 
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
   z-index: 1;
 }
 
 .modal-content {
-  background: rgba(10, 25, 47, 0.95);
-  border: 1px solid rgba(0, 195, 255, 0.3);
+  background: var(--bg-secondary);
   border-radius: 12px;
   width: 90%;
   max-width: 500px;
-  padding: 25px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 
-              0 0 20px rgba(0, 195, 255, 0.2);
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
   position: relative;
   z-index: 2;
-  overflow-y: auto;     
-  max-height: 90vh;     
-}
-
-
-.modal-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #00c3ff, #0066cc);
+  overflow-y: auto;
+  max-height: 90vh;
+  border: 1px solid var(--blue-border);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid rgba(0, 195, 255, 0.1);
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--bg-tertiary);
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #00f3ff;
+  color: var(--blue-primary);
 }
 
 .close-btn {
   background: transparent;
   border: none;
-  color: #00f3ff;
-  font-size: 24px;
+  color: var(--text-secondary);
+  font-size: 1.75rem;
   cursor: pointer;
-  transition: color 0.3s;
+  transition: var(--transition);
+  line-height: 1;
+  padding: 0.25rem;
 }
 
-.close-btn:hover {
-  color: #ff2a6d;
+.close-btn:hover,
+.close-btn:focus {
+  color: var(--blue-accent);
+  transform: scale(1.1);
 }
 
 .form-row {
   display: flex;
-  gap: 15px;
-  margin-bottom: 15px;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .form-row .form-group {
-  flex: 1;
+  flex: 1 1 45%;
+  min-width: 200px;
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 1.25rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 0.5rem;
   font-size: 0.9rem;
-  color: #00c3ff;
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 10px 12px;
-  background: rgba(5, 15, 30, 0.7);
-  border: 1px solid rgba(0, 195, 255, 0.3);
+  padding: 0.75rem;
+  background: var(--bg-main);
+  border: 1px solid var(--bg-tertiary);
   border-radius: 6px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.95rem;
-  transition: all 0.3s;
+  transition: var(--transition);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #00f3ff;
-  box-shadow: 0 0 0 2px rgba(0, 243, 255, 0.2);
+  border-color: var(--blue-primary);
+  box-shadow: 0 0 0 2px var(--blue-light);
 }
 
 .form-group textarea {
   resize: vertical;
-  min-height: 80px;
+  min-height: 100px;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid rgba(0, 195, 255, 0.1);
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--bg-tertiary);
 }
 
-.form-actions button {
-  padding: 10px 22px;
+.btn {
+  padding: 0.75rem 1.5rem;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.3s;
+  transition: var(--transition);
+  border: 1px solid transparent;
+  font-size: 0.95rem;
 }
 
-.form-actions button:first-child {
+.btn-secondary {
   background: transparent;
-  border: 1px solid #ff2a6d;
-  color: #ff2a6d;
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
 }
 
-.form-actions button:first-child:hover {
-  background: rgba(255, 42, 109, 0.1);
+.btn-secondary:hover,
+.btn-secondary:focus {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--text-primary);
+  color: var(--text-primary);
 }
 
-.form-actions button:last-child {
-  background: linear-gradient(90deg, #00c3ff, #0066cc);
-  border: none;
-  color: #fff;
-  font-weight: 600;
-}
-
-.form-actions button:last-child:hover {
-  background: linear-gradient(90deg, #00d3ff, #0077ee);
-  box-shadow: 0 0 10px rgba(0, 195, 255, 0.4);
-}
-
-/* Add Road Button */
-.add-road-btn {
-  background: linear-gradient(90deg, #00c3ff, #0066cc);
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
+.btn-primary {
+  background: var(--blue-primary);
   color: white;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
 }
 
-.add-road-btn:hover {
-  background: linear-gradient(90deg, #00d3ff, #0077ee);
-  box-shadow: 0 0 10px rgba(0, 195, 255, 0.4);
-} 
+.btn-primary:hover,
+.btn-primary:focus {
+  background: var(--blue-accent);
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.4);
+}
 
-/* added new css */
-/* ===== GLOBAL STYLES & THEME ===== */
+.add-road-btn {
+  composes: btn;
+  background: var(--blue-secondary);
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.add-road-btn:hover,
+.add-road-btn:focus {
+  background: var(--blue-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .form-row .form-group {
+    flex: 1 1 100%;
+    min-width: unset;
+  }
+  
+  .form-actions {
+    flex-wrap: wrap;
+  }
+  
+  .btn {
+    flex: 1;
+    min-width: 100%;
+  }
+}

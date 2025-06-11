@@ -3,13 +3,14 @@ from flask_migrate import Migrate
 from models import db, Road, Contractor, Milestone, Photo, User, Notification, RoadStats,AccessibilitySetting
 from utils import sort_and_search_roads, calculate_road_stats, format_currency, format_date
 from datetime import datetime
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'meru_roads.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+CORS(app)
 db.init_app(app)
 migrate = Migrate(app, db)
 
@@ -446,7 +447,71 @@ def update_accessibility_settings(user_id):
     db.session.commit()
     return jsonify(settings.serialize())
 
+@app.route('/api/map/meru-boundary', methods=['GET'])
+def get_meru_boundary():
+    """Return GeoJSON for Meru County boundary"""
+    meru_boundary = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {
+                    "name": "Meru County",
+                    "id": "meru-county"
+                },
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            # Simplified boundary coordinates for Meru County
+                            [37.5, 0.25],   # North-West
+                            [38.2, 0.25],   # North-East
+                            [38.2, -0.25],  # South-East
+                            [37.5, -0.25],  # South-West
+                            [37.5, 0.25]    # Back to North-West
+                        ]
+                    ]
+                }
+            }
+        ]
+    }
+    return jsonify(meru_boundary)
 
+@app.route('/api/map/meru-boundary', methods=['GET'])
+def get_meru_boundary():
+    """Return GeoJSON for Meru County boundary"""
+    meru_boundary = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {
+                    "name": "Meru County",
+                    "id": "meru-county",
+                    "area": "6936 km²",
+                    "population": "1.5 million"
+                },
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            # Actual approximate coordinates for Meru County
+                            [37.550, 0.050],  # Meru town area
+                            [37.850, 0.400],  # North
+                            [38.150, 0.350],  # North-East
+                            [38.250, 0.100],  # East
+                            [38.150, -0.150], # South-East
+                            [37.850, -0.250], # South
+                            [37.600, -0.200], # South-West
+                            [37.450, -0.050], # West
+                            [37.550, 0.050]   # Close polygon
+                        ]
+                    ]
+                }
+            }
+        ]
+    }
+    return jsonify(meru_boundary)
 
 # ========================
 # ERROR HANDLERS

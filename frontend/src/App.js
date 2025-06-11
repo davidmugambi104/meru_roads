@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import Map from 'react-map-gl/mapbox';
 import { NavigationControl, FullscreenControl } from 'react-map-gl/mapbox';
@@ -19,12 +18,16 @@ import AssetManager from './components/equipmentTracker';
 import UserManagement from './components/usermanagement';
 import TrafficAnalysis from './components/TrafficAnalysis';
 import FieldReport from './components/fieldReport';
+import Portal from './components/portal';
 import RoadHealthPredictor from './components/RoadHealthPredictor';
+import {AccessibilityProvider, AccessibilityIcon} from './components/AccessibilityPanel'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 // Mapbox token setup
 mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA';
 
-const API_BASE = 'https://meru-roads.onrender.com/api';
+// API Configuration
+const API_BASE = 'https://meru-road-backend.onrender.com/api';
 
 // Helper function for API calls
 const fetchData = async (endpoint, options = {}) => {
@@ -32,12 +35,14 @@ const fetchData = async (endpoint, options = {}) => {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
       },
       ...options
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `API error: ${response.status}`);
     }
 
     return await response.json();
@@ -60,6 +65,12 @@ const api = {
     fetchData(`/roads/${id}/progress`, {
       method: 'PATCH',
       body: JSON.stringify({ progress })
+    }),
+  
+  createRoad: (roadData) => 
+    fetchData('/roads', {
+      method: 'POST',
+      body: JSON.stringify(roadData)
     }),
   
   // Stats endpoint
@@ -92,13 +103,12 @@ const api = {
     fetchData(`/roads/${roadId}/milestones`)
 };
 
-
 const App = () => {
   const [selectedRoad, setSelectedRoad] = useState('maua');
   const [searchQuery, setSearchQuery] = useState('');
   const [roadData, setRoadData] = useState(null);
   const [user, setUser] = useState({ name: 'Admin User', role: 'County Engineer' });
-  const [notifications, setNotifications] = useState(3);
+  const [notifications, setNotifications] = useState(0);
   const [time, setTime] = useState(new Date());
   const [mapStyle, setMapStyle] = useState("mapbox://styles/mapbox/satellite-streets-v12");
   const [roads, setRoads] = useState([]);
@@ -108,7 +118,7 @@ const App = () => {
   const [showAllRoads, setShowAllRoads] = useState(false);
   const mapRef = useRef(null);
   const canvasRef = useRef(null);
-  // Add these to your existing state variables
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAddRoadForm, setShowAddRoadForm] = useState(false);
   const [newRoad, setNewRoad] = useState({
     name: '',
@@ -126,180 +136,25 @@ const App = () => {
   });
   const [tempCoord, setTempCoord] = useState([null, null]);
   
-  // JSON data for roads in Meru, Kenya
-  const meruRoadsData = [
-    {
-      id: 'maua',
-      name: 'Maua Highway',
-      length: 18.5,
-      budget: 2400000000,
-      status: 'ongoing',
-      contractor: 'Meru Builders Ltd.',
-      startDate: '2023-01-15',
-      endDate: '2024-10-30',
-      progress: 65,
-      milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
-      completedMilestones: 3,
-      description: 'The Maua Highway project represents our commitment to connecting Meru County\'s agricultural heartland to national markets.',
-      coordinates: [[37.60, 0.08], [37.65, 0.06], [37.70, 0.04], [37.75, 0.02]]
-    },
-    {
-      id: 'nkubu',
-      name: 'Nkubu Bypass',
-      length: 7.2,
-      budget: 850000000,
-      status: 'ongoing',
-      contractor: 'Highway Constructors Co.',
-      startDate: '2023-03-10',
-      endDate: '2024-05-15',
-      progress: 45,
-      milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
-      completedMilestones: 2,
-      description: 'The Nkubu Bypass will alleviate traffic congestion in the central business district.',
-      coordinates: [[37.58, 0.00], [37.62, -0.02], [37.65, -0.04]]
-    },
-    {
-      id: 'makutano',
-      name: 'Makutano Junction',
-      length: 3.8,
-      budget: 420000000,
-      status: 'completed',
-      contractor: 'Urban Roads Ltd.',
-      startDate: '2022-11-01',
-      endDate: '2023-08-20',
-      progress: 100,
-      milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
-      completedMilestones: 5,
-      description: 'Makutano Junction upgrade has significantly improved traffic flow and safety.',
-      coordinates: [[37.67, 0.03], [37.68, 0.02], [37.69, 0.01]]
-    },
-    {
-      id: 'mikinduri',
-      name: 'Mikinduri Road',
-      length: 12.3,
-      budget: 1200000000,
-      status: 'planned',
-      contractor: 'TBD',
-      startDate: '2024-02-01',
-      endDate: '2025-06-30',
-      progress: 10,
-      milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
-      completedMilestones: 1,
-      description: 'Mikinduri Road will connect remote villages to the main highway network.',
-      coordinates: [[37.72, 0.03], [37.75, 0.04], [37.78, 0.05]]
-    },
-    {
-      id: 'kianjai',
-      name: 'Kianjai Corridor',
-      length: 9.7,
-      budget: 1100000000,
-      status: 'ongoing',
-      contractor: 'County Infrastructure Group',
-      startDate: '2023-05-22',
-      endDate: '2024-09-15',
-      progress: 30,
-      milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
-      completedMilestones: 2,
-      description: 'Kianjai Corridor is part of the agricultural development initiative.',
-      coordinates: [[37.63, 0.01], [37.65, 0.01], [37.67, 0.00]]
-    },
-    {
-      id: 'gitoro',
-      name: 'Gitoro-Kiirua Road',
-      length: 12.4,
-      budget: 290000000,
-      status: 'ongoing',
-      contractor: 'Eastern Roads Ltd.',
-      startDate: '2023-03-20',
-      endDate: '2024-03-15',
-      progress: 41,
-      milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
-      completedMilestones: 2,
-      description: 'Road improvement project in Gitoro area',
-      coordinates: [[37.61, 0.02], [37.63, 0.01], [37.65, 0.00]]
-    },
-    {
-      id: 'mitunguu',
-      name: 'Mitunguu-Kaaga Road',
-      length: 8.9,
-      budget: 180000000,
-      status: 'completed',
-      contractor: 'Meru County Works',
-      startDate: '2022-01-10',
-      endDate: '2022-11-30',
-      progress: 100,
-      milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
-      completedMilestones: 5,
-      description: 'Urban road connecting Mitunguu to Kaaga',
-      coordinates: [[37.59, -0.01], [37.60, -0.02], [37.62, -0.03]]
-    },
-    {
-      id: 'nchiru',
-      name: 'Nchiru-Kiagu Road',
-      length: 23.6,
-      budget: 520000000,
-      status: 'ongoing',
-      contractor: 'Tana River Construction',
-      startDate: '2022-11-15',
-      endDate: '2024-08-31',
-      progress: 48,
-      milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
-      completedMilestones: 2,
-      description: 'Rural road connecting Nchiru and Kiagu',
-      coordinates: [[37.70, 0.05], [37.72, 0.04], [37.74, 0.03]]
-    },
-    {
-      id: 'kiegoi',
-      name: 'Kiegoi-Antubochiu Road',
-      length: 14.3,
-      budget: 310000000,
-      status: 'completed',
-      contractor: 'Mount Kenya Builders',
-      startDate: '2021-09-01',
-      endDate: '2022-12-15',
-      progress: 100,
-      milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
-      completedMilestones: 5,
-      description: 'Road in the foothills of Mount Kenya',
-      coordinates: [[37.55, 0.04], [37.57, 0.03], [37.59, 0.02]]
-    },
-    {
-      id: 'kibirichia',
-      name: 'Kibirichia-Chogoria Road',
-      length: 37.8,
-      budget: 750000000,
-      status: 'ongoing',
-      contractor: 'Central Highlands Construction',
-      startDate: '2023-02-10',
-      endDate: '2025-01-31',
-      progress: 28,
-      milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
-      completedMilestones: 1,
-      description: 'Major road connecting two major towns',
-      coordinates: [[37.65, 0.07], [37.68, 0.06], [37.71, 0.05]]
-    }
-  ];
-
   // Fetch roads data from API
   useEffect(() => {
     const fetchRoads = async () => {
       try {
-        // Simulate API call with our local data
-        // Sort alphabetically by name
-        const sortedRoads = [...meruRoadsData].sort((a, b) => a.name.localeCompare(b.name));
-        setRoads(sortedRoads);
-        setLoading(false);
+        setLoading(true);
+        const data = await api.getRoads(searchQuery);
+        setRoads(data);
         
         // Set initial road data
-        if (sortedRoads.length > 0 && !roadData) {
-          const initialRoad = sortedRoads.find(r => r.id === selectedRoad) || sortedRoads[0];
+        if (data.length > 0 && !roadData) {
+          const initialRoad = data.find(r => r.id === selectedRoad) || data[0];
           setRoadData(initialRoad);
           setSelectedRoad(initialRoad.id);
         }
       } catch (error) {
         console.error('Failed to fetch roads:', error);
-        // Fallback to original hardcoded data if API fails
-        setRoads(meruRoadsData);
+        alert('Failed to load road data. Using fallback information');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -310,21 +165,10 @@ const App = () => {
   useEffect(() => {
     const fetchStatsData = async () => {
       try {
-        // Simulate stats API call
-        setStats({
-          totalRoads: meruRoadsData.length,
-          completed: meruRoadsData.filter(r => r.status === 'completed').length,
-          inProgress: meruRoadsData.filter(r => r.status === 'ongoing').length,
-          planned: meruRoadsData.filter(r => r.status === 'planned').length,
-          budgetAllocated: meruRoadsData.reduce((sum, road) => sum + road.budget, 0),
-          budgetSpent: meruRoadsData.reduce((sum, road) => {
-            // Estimate spent based on progress
-            return sum + (road.budget * (road.progress / 100));
-          }, 0)
-        });
+        const statsData = await api.getStats();
+        setStats(statsData);
       } catch (error) {
         console.error('Failed to fetch stats:', error);
-        // Keep default stats
       }
     };
 
@@ -335,42 +179,24 @@ const App = () => {
   useEffect(() => {
     const fetchPhotos = async () => {
       try {
-        // Simulate photos API call
-        const photos = [
-          { id: 1, road: 'maua', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=500' },
-          { id: 2, road: 'maua', url: 'https://images.unsplash.com/photo-1509310202330-aec5af0c4cbc?q=80&w=500' },
-          { id: 3, road: 'nkubu', url: 'https://images.unsplash.com/photo-1584017912151-3e2c1d0f4d0a?q=80&w=500' },
-          { id: 4, road: 'makutano', url: 'https://images.unsplash.com/photo-1605184861726-04e5c8f171e0?q=80&w=500' },
-          { id: 5, road: 'mikinduri', url: 'https://images.unsplash.com/photo-1584017912151-3e2c1d0f4d0a?q=80&w=500' },
-          { id: 6, road: 'kianjai', url: 'https://images.unsplash.com/photo-1597007233337-8f1d23c0f7a8?q=80&w=500' },
-          { id: 7, road: 'gitoro', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=500' },
-          { id: 8, road: 'mitunguu', url: 'https://images.unsplash.com/photo-1509310202330-aec5af0c4cbc?q=80&w=500' },
-          { id: 9, road: 'nchiru', url: 'https://images.unsplash.com/photo-1584017912151-3e2c1d0f4d0a?q=80&w=500' },
-          { id: 10, road: 'kiegoi', url: 'https://images.unsplash.com/photo-1605184861726-04e5c8f171e0?q=80&w=500' }
-        ];
-        setPhotos(photos);
+        const photosData = await api.getPhotos(selectedRoad);
+        setPhotos(photosData);
       } catch (error) {
         console.error('Failed to fetch photos:', error);
-        // Keep default photos
       }
     };
 
-    fetchPhotos();
+    if (selectedRoad) fetchPhotos();
   }, [selectedRoad]);
 
   // Fetch user data from API
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        // Simulate user API call
-        setUser({
-          name: 'John Mwenda',
-          role: 'County Engineer',
-          initials: 'JM'
-        });
+        const userData = await api.getCurrentUser();
+        setUser(userData);
       } catch (error) {
         console.error('Failed to fetch user:', error);
-        // Keep default user
       }
     };
 
@@ -381,11 +207,10 @@ const App = () => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        // Simulate notifications API call
-        setNotifications(3);
+        const notificationsData = await api.getNotifications();
+        setNotifications(notificationsData.count);
       } catch (error) {
         console.error('Failed to fetch notifications:', error);
-        // Keep default notifications
       }
     };
 
@@ -483,19 +308,27 @@ const App = () => {
   useEffect(() => {
     if (roads.length === 0) return;
     
-    const road = roads.find(r => r.id === selectedRoad);
-    if (road) {
-      setRoadData(road);
-      
-      // Animate stats - ORIGINAL ANIMATION PRESERVED
-      gsap.from('.stat-value', {
-        duration: 1.5,
-        innerText: 0,
-        snap: { innerText: 1 },
-        stagger: 0.2,
-        ease: "power2.out"
-      });
-    }
+    const fetchRoadDetails = async () => {
+      try {
+        const road = await api.getRoad(selectedRoad);
+        setRoadData(road);
+        
+        // Animate stats
+        gsap.from('.stat-value', {
+          duration: 1.5,
+          innerText: 0,
+          snap: { innerText: 1 },
+          stagger: 0.2,
+          ease: "power2.out"
+        });
+      } catch (error) {
+        console.error('Failed to fetch road details:', error);
+        const fallbackRoad = roads.find(r => r.id === selectedRoad);
+        if (fallbackRoad) setRoadData(fallbackRoad);
+      }
+    };
+    
+    fetchRoadDetails();
   }, [selectedRoad, roads]);
   
   // Handle road selection
@@ -511,106 +344,79 @@ const App = () => {
       }
     }
   };
-  // Add these functions in your App component
-    const handleAddCoordinate = () => {
-      if (tempCoord[0] !== null && tempCoord[1] !== null) {
-        setNewRoad({
-          ...newRoad,
-          coordinates: [...newRoad.coordinates, [parseFloat(tempCoord[0]), parseFloat(tempCoord[1])]]
-        });
-        setTempCoord([null, null]);
-      }
-    };
 
-    const handleRemoveCoordinate = (index) => {
-      const newCoords = [...newRoad.coordinates];
-      newCoords.splice(index, 1);
-      setNewRoad({...newRoad, coordinates: newCoords});
-    };
-// ...existing code...
+  // Add coordinate helpers
+  const handleAddCoordinate = () => {
+    if (tempCoord[0] !== null && tempCoord[1] !== null) {
+      setNewRoad({
+        ...newRoad,
+        coordinates: [...newRoad.coordinates, [parseFloat(tempCoord[0]), parseFloat(tempCoord[1])]]
+      });
+      setTempCoord([null, null]);
+    }
+  };
 
-// Replace your handleAddRoadSubmit with this version:
-const handleAddRoadSubmit = async (e) => {
-  e.preventDefault();
+  const handleRemoveCoordinate = (index) => {
+    const newCoords = [...newRoad.coordinates];
+    newCoords.splice(index, 1);
+    setNewRoad({...newRoad, coordinates: newCoords});
+  };
+
+  // Handle new road submission
+  const handleAddRoadSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate coordinates
+    if (newRoad.coordinates.length < 2) {
+      alert("Please add at least two coordinate points");
+      return;
+    }
+
+    try {
+      // Prepare road data
+      const roadData = {
+        name: newRoad.name,
+        length: parseFloat(newRoad.length),
+        budget: parseFloat(newRoad.budget),
+        status: newRoad.status,
+        contractor: newRoad.contractor,
+        startDate: newRoad.startDate,
+        endDate: newRoad.endDate,
+        progress: newRoad.progress,
+        milestones: newRoad.milestones,
+        completedMilestones: newRoad.completedMilestones,
+        description: newRoad.description,
+        coordinates: newRoad.coordinates
+      };
+
+      // Send to backend
+      const createdRoad = await api.createRoad(roadData);
+      
+      // Reset form
+      setNewRoad({
+        name: '',
+        length: '',
+        budget: '',
+        status: 'planned',
+        contractor: '',
+        startDate: '',
+        endDate: '',
+        progress: 0,
+        milestones: ['Planning', 'Land Prep', 'Foundation', 'Paving', 'Finishing'],
+        completedMilestones: 0,
+        description: '',
+        coordinates: []
+      });
+      
+      setShowAddRoadForm(false);
+      setRoads(prev => [...prev, createdRoad]);
+      alert('Road project created successfully!');
+    } catch (error) {
+      console.error('Error creating road:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
   
-  // Validate coordinates
-  if (newRoad.coordinates.length < 2) {
-    alert("Please add at least two coordinate points");
-    return;
-  }
-
-  // Validate dates
-  if (new Date(newRoad.start_date) > new Date(newRoad.end_date)) {
-    alert("End date must be after start date");
-    return;
-  }
-
-  try {
-    // Prepare road data
-    const roadData = {
-      name: newRoad.name,
-      length: parseFloat(newRoad.length),
-      budget: parseFloat(newRoad.budget),
-      status: newRoad.status,
-      start_date: newRoad.start_date,
-      end_date: newRoad.end_date,
-      description: newRoad.description,
-      contractor: newRoad.contractor,
-      map_coordinates: newRoad.coordinates.map(coord => [
-        parseFloat(coord[0]),
-        parseFloat(coord[1])
-      ])
-    };
-
-    // Debugging: Log request data
-    console.log("Submitting road data:", roadData);
-    
-    // Send to backend
-    const response = await fetch('/api/roads', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(roadData)
-    });
-
-    // Handle non-JSON responses
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.error('Non-JSON response:', text);
-      throw new Error(`Server returned unexpected format (status ${response.status})`);
-    }
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Request failed with status ${response.status}`);
-    }
-
-    const createdRoad = await response.json();
-    
-    // Reset form
-    setNewRoad({
-      name: '',
-      length: '',
-      budget: '',
-      status: 'planned',
-      start_date: '',
-      end_date: '',
-      description: '',
-      contractor: '',
-      coordinates: []
-    });
-    
-    setShowAddRoadForm(false);
-    setRoads(prev => [...prev, createdRoad]);
-    alert('Road project created successfully!');
-  } catch (error) {
-    console.error('Error creating road:', error);
-    alert(`Error: ${error.message}`);
-  }
-};
   // Calculate center of coordinates
   const calculateCenter = (coordinates) => {
     if (coordinates.length === 0) return [37.65, 0.05];
@@ -626,32 +432,45 @@ const handleAddRoadSubmit = async (e) => {
     return [sumLng / coordinates.length, sumLat / coordinates.length];
   };
   
-  // Handle map load - MODIFIED TO USE API
-  const handleMapLoad = (e) => {
+  // Handle map load
+  const handleMapLoad = async (e) => {
     mapRef.current = e.target;
 
-      e.target.addLayer({
-        'id': 'meru-boundary-fill',
-        'type': 'fill',
-        'source': 'meru-boundary',
-        'paint': {
-          'fill-color': '#0080ff',
-          'fill-opacity': 0.05
-        }
-      });
+    try {
+      // Add Meru boundary if available
+      const boundaryData = await fetchData('/map/meru-boundary');
+      if (boundaryData) {
+        e.target.addSource('meru-boundary', {
+          'type': 'geojson',
+          'data': boundaryData
+        });
 
-      e.target.addLayer({
-        'id': 'meru-boundary-line',
-        'type': 'line',
-        'source': 'meru-boundary',
-        'paint': {
-          'line-color': '#0066cc',
-          'line-width': 2,
-          'line-opacity': 0.7
-        }
-      });
+        e.target.addLayer({
+          'id': 'meru-boundary-fill',
+          'type': 'fill',
+          'source': 'meru-boundary',
+          'paint': {
+            'fill-color': '#0080ff',
+            'fill-opacity': 0.05
+          }
+        });
+
+        e.target.addLayer({
+          'id': 'meru-boundary-line',
+          'type': 'line',
+          'source': 'meru-boundary',
+          'paint': {
+            'line-color': '#0066cc',
+            'line-width': 2,
+            'line-opacity': 0.7
+          }
+        });
+      }
+    } catch (error) {
+      console.log('Boundary data not available');
+    }
     
-    // Add 3D terrain - ORIGINAL CODE PRESERVED
+    // Add 3D terrain
     e.target.addSource('mapbox-dem', {
       'type': 'raster-dem',
       'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
@@ -662,88 +481,63 @@ const handleAddRoadSubmit = async (e) => {
     e.target.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
     
     // Add road data from API
-    const addRoadsToMap = async () => {
-      try {
-        // Simulate map roads API call
-        const mapRoads = {
-          type: 'FeatureCollection',
-          features: roads.map(road => ({
-            type: 'Feature',
-            properties: {
-              id: road.id,
-              name: road.name,
-              status: road.status
-            },
-            geometry: {
-              type: 'LineString',
-              coordinates: road.coordinates
-            }
-          }))
-        };
-        
-        e.target.addSource('roads', {
-          'type': 'geojson',
-          'data': mapRoads
-        });
-        
-        // Add road layer - ORIGINAL STYLING PRESERVED
-        e.target.addLayer({
-          'id': 'roads-layer',
-          'type': 'line',
-          'source': 'roads',
-          'layout': {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
-          'paint': {
-            'line-color': [
-              'match',
-              ['get', 'status'],
-              'ongoing', '#00f3ff',
-              'completed', '#00ff64',
-              'planned', '#b967ff',
-              '#ccc'
-            ],
-            'line-width': 5,
-            'line-opacity': 0.8,
-            'line-blur': 0.5
-          }
-        });
-        
-        // Add glow effect - ORIGINAL CODE PRESERVED
-        e.target.addLayer({
-          'id': 'roads-glow',
-          'type': 'line',
-          'source': 'roads',
-          'paint': {
-            'line-color': [
-              'match',
-              ['get', 'status'],
-              'ongoing', '#00f3ff',
-              'completed', '#00ff64',
-              'planned', '#b967ff',
-              '#ccc'
-            ],
-            'line-width': 15,
-            'line-opacity': 0.1,
-            'line-blur': 1
-          }
-        });
-        
-        // Fly to selected road
-        handleRoadSelect(selectedRoad);
-      } catch (error) {
-        console.error('Failed to add roads to map:', error);
-        // Fallback to original coordinates
-        const road = roads.find(r => r.id === selectedRoad);
-        if (road && road.coordinates) {
-          const center = calculateCenter(road.coordinates);
-          e.target.flyTo({ center, zoom: 12 });
+    try {
+      const mapRoads = await api.getMapRoads();
+      
+      e.target.addSource('roads', {
+        'type': 'geojson',
+        'data': mapRoads
+      });
+      
+      // Add road layer
+      e.target.addLayer({
+        'id': 'roads-layer',
+        'type': 'line',
+        'source': 'roads',
+        'layout': {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        'paint': {
+          'line-color': [
+            'match',
+            ['get', 'status'],
+            'ongoing', '#00f3ff',
+            'completed', '#00ff64',
+            'planned', '#b967ff',
+            '#ccc'
+          ],
+          'line-width': 5,
+          'line-opacity': 0.8,
+          'line-blur': 0.5
         }
-      }
-    };
+      });
+      
+      // Add glow effect
+      e.target.addLayer({
+        'id': 'roads-glow',
+        'type': 'line',
+        'source': 'roads',
+        'paint': {
+          'line-color': [
+            'match',
+            ['get', 'status'],
+            'ongoing', '#00f3ff',
+            'completed', '#00ff64',
+            'planned', '#b967ff',
+            '#ccc'
+          ],
+          'line-width': 15,
+          'line-opacity': 0.1,
+          'line-blur': 1
+        }
+      });
+    } catch (error) {
+      console.error('Failed to add roads to map:', error);
+    }
     
-    addRoadsToMap();
+    // Fly to selected road
+    handleRoadSelect(selectedRoad);
   };
   
   // Handle progress update
@@ -757,14 +551,15 @@ const handleAddRoadSubmit = async (e) => {
     if (isNaN(progressValue)) return;
     
     try {
-      // Simulate progress update API call
+      await api.updateProgress(roadData.id, progressValue);
+      
+      // Update local state
       setRoads(prevRoads => 
         prevRoads.map(road => 
           road.id === roadData.id ? { ...road, progress: progressValue } : road
         )
       );
       
-      // Refresh current road data
       setRoadData({...roadData, progress: progressValue});
       
       // Animate the progress bar
@@ -791,16 +586,8 @@ const handleAddRoadSubmit = async (e) => {
     const caption = prompt('Enter photo caption:', 'Progress photo');
     
     try {
-      // Simulate photo upload API call
-      const newPhoto = {
-        id: photos.length + 1,
-        road: roadData.id,
-        url,
-        caption
-      };
-      
+      const newPhoto = await api.addPhoto(roadData.id, url, caption);
       setPhotos([...photos, newPhoto]);
-      
       alert('Photo uploaded successfully!');
     } catch (error) {
       console.error('Failed to upload photo:', error);
@@ -816,7 +603,7 @@ const handleAddRoadSubmit = async (e) => {
   // Filter photos for selected road
   const roadPhotos = photos.filter(photo => photo.road === selectedRoad);
   
-  // Format currency - ORIGINAL FUNCTION PRESERVED
+  // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
@@ -826,13 +613,13 @@ const handleAddRoadSubmit = async (e) => {
     }).format(amount);
   };
   
-  // Format date - ORIGINAL FUNCTION PRESERVED
+  // Format date
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
   
-  // Get status class - ORIGINAL FUNCTION PRESERVED
+  // Get status class
   const getStatusClass = (status) => {
     switch(status) {
       case 'ongoing': return 'status-ongoing';
@@ -851,17 +638,16 @@ const handleAddRoadSubmit = async (e) => {
   const getDisplayRoads = () => {
     return showAllRoads ? filteredRoads : filteredRoads.slice(0, 4);
   };
-  // User management panel
-
 
   return (
     <div className="app">
-      {/* 3D Background Canvas - ORIGINAL ELEMENT PRESERVED */}
+      {/* 3D Background Canvas */}
+      <canvas ref={canvasRef} className="bg-canvas"></canvas>
       
-      {/* CRT Overlay - ORIGINAL ELEMENT PRESERVED */}
+      {/* CRT Overlay */}
       <div className="crt-overlay"></div>
       
-      {/* Header - ORIGINAL STRUCTURE PRESERVED */}
+      {/* Header */}
       <header>
         <div className="logo">
           <div className="logo-icon">
@@ -883,6 +669,11 @@ const handleAddRoadSubmit = async (e) => {
               <FaSearch /> Search
             </button>
           </div>
+          <AccessibilityIcon
+            size={32}
+            hoverColor="#E53E3E"
+            onClick={() => setSettingsOpen(true)}
+          />
           
           <div className="user-info">
             <div className="notification-badge">
@@ -901,7 +692,7 @@ const handleAddRoadSubmit = async (e) => {
         </div>
       </header>
       
-      {/* Dashboard Container - ORIGINAL STRUCTURE PRESERVED */}
+      {/* Dashboard Container */}
       <div className="dashboard-container">
         {/* Sidebar */}
         <div className="sidebar">
@@ -970,7 +761,7 @@ const handleAddRoadSubmit = async (e) => {
               <>
                 <div className="stats-grid">
                   <div className="stat-item">
-                    <div className="stat-value">{stats.totalRoads}</div>
+                    <div className="stat-value">{stats.total_Roads}</div>
                     <div className="stat-label">Total Roads</div>
                   </div>
                   <div className="stat-item">
@@ -1017,7 +808,7 @@ const handleAddRoadSubmit = async (e) => {
               <h2><FaCamera /> Recent Photos</h2>
             </div>
             <div className="photo-gallery">
-              {roadPhotos.length > 0 ? (
+              {roadPhotos.length > 0 ? (    
                 roadPhotos.slice(0, 6).map(photo => (
                   <div key={photo.id} className="photo-item">
                     <img src={photo.url} alt={`Road construction ${photo.id}`} />
@@ -1161,20 +952,24 @@ const handleAddRoadSubmit = async (e) => {
           )}
         </div>
       </div>
-      <div style={{display: 'inline-block', marginRight: '20px'}}>
-        <UserManagement/>
-      </div>
-      <div style={{display: 'inline-block',marginTop: '20px', marginLeft: '200px'}}>
-        <AssetManager/>
-      </div>
-      {/* <ARVisualizer/> */}
-      {/* <TrafficAnalysis/> */}
-      {/* <AccessibilityPanel/> */}
-      {/* <EnvironmentalImpact/> */}
-      {/* <RoadHealthPredictor/> */}
+      <AssetManager/>
+      <UserManagement/>
+      <Portal/>
+      {/* <RoadHealthPredictor/>
+      <TrafficAnalysis/> */}
+      <FieldReport/>
 
-   
-
+  
+      {/* Footer */}
+      <footer>
+        <p>Meru County Roadworks Dashboard &copy; {new Date().getFullYear()} | Developed for the People of Meru County</p>
+        <p>
+          {time.toLocaleDateString()} | {time.toLocaleTimeString()} | 
+          <span> Data updated: {new Date().toLocaleDateString()}</span>
+        </p>
+      </footer>
+      
+      {/* Add Road Modal */}
       {showAddRoadForm && (
         <div className="form-modal">
           <div className="modal-content">
@@ -1246,21 +1041,19 @@ const handleAddRoadSubmit = async (e) => {
                 
                 <div className="form-group">
                   <label>Start Date</label>
-                  {/* Date Fields */}
                   <input
                     type="date"
-                    value={newRoad.start_date}
-                    onChange={e => setNewRoad({...newRoad, start_date: e.target.value})}
+                    value={newRoad.startDate}
+                    onChange={e => setNewRoad({...newRoad, startDate: e.target.value})}
                   />
-
                 </div>
                 
                 <div className="form-group">
                   <label>End Date</label>
                   <input
                     type="date"
-                    value={newRoad.end_date}
-                    onChange={e => setNewRoad({...newRoad, end_date: e.target.value})}
+                    value={newRoad.endDate}
+                    onChange={e => setNewRoad({...newRoad, endDate: e.target.value})}
                   />
                 </div>
                 
@@ -1328,21 +1121,11 @@ const handleAddRoadSubmit = async (e) => {
           </div>
         </div>
       )}
-      
-      
-      {/* Footer - ORIGINAL CODE PRESERVED */}
-      <footer>
-        <p>Meru County Roadworks Dashboard &copy; {new Date().getFullYear()} | Developed for the People of Meru County</p>
-        <p>
-          {time.toLocaleDateString()} | {time.toLocaleTimeString()} | 
-          <span> Data updated: {new Date().toLocaleDateString()}</span>
-        </p>
-      </footer>
     </div>
   );
 };
 
-// Reusable CyberCard component - ORIGINAL COMPONENT PRESERVED
+// Reusable CyberCard component
 const CyberCard = ({ children, className }) => {
   return (
     <div className={`cyber-card ${className || ''}`}>

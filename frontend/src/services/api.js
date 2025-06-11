@@ -1,4 +1,6 @@
-const API_BASE = 'https://meru-roads.onrender.com/api';
+const API_BASE = 'http://127.0.0.1:5000/api';
+
+// Helper function for API callsconst API_BASE = 'http://127.0.0.1:5000/api'; 
 
 // Helper function for API calls
 export const fetchData = async (endpoint, options = {}) => {
@@ -63,5 +65,12 @@ export const api = {
   
   // Milestones
   getMilestones: (roadId, completed) => 
-    fetchData(`/road/${roadId}/milestones?completed=${completed}`)
+    fetchData(`/road/${roadId}/milestones?completed=${completed}`),
+
+  // Contractor endpoints
+  getContractors: () =>
+    fetchData('/contractors'),
+
+  getContractor: (id) =>
+    fetchData(`/contractors/${id}`)
 };
