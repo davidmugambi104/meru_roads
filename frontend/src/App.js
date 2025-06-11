@@ -645,7 +645,7 @@ const App = () => {
       {/* <canvas ref={canvasRef} className="bg-canvas"></canvas> */}
       
       {/* CRT Overlay */}
-      <div className="crt-overlay"></div>
+      {/* <div className="crt-overlay"></div> */}
       
       {/* Header */}
       <header>
