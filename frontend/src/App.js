@@ -642,10 +642,10 @@ const App = () => {
   return (
     <div className="app">
       {/* 3D Background Canvas */}
-      <canvas ref={canvasRef} className="bg-canvas"></canvas>
+      {/* <canvas ref={canvasRef} className="bg-canvas"></canvas> */}
       
       {/* CRT Overlay */}
-      {/* <div className="crt-overlay"></div> */}
+      <div className="crt-overlay"></div>
       
       {/* Header */}
       <header>
